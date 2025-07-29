@@ -1,20 +1,22 @@
-// ride.model.ts
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import { IRide } from "./ride.interface";
 
-const LocationSchema = {
-  lat: { type: Number, required: true },
-  lng: { type: Number, required: true },
-  address: { type: String },
-};
+const LocationSchema = new Schema(
+  {
+    lat: { type: Number, required: true },
+    lng: { type: Number, required: true },
+    address: { type: String },
+  },
+  { _id: false }
+);
 
 const RideSchema = new Schema<IRide>(
   {
     rider: { type: Schema.Types.ObjectId, ref: "User", required: true },
     driver: { type: Schema.Types.ObjectId, ref: "User" },
 
-    pickupLocation: LocationSchema,
-    destinationLocation: LocationSchema,
+    pickupLocation: { type: LocationSchema, required: true },
+    destinationLocation: { type: LocationSchema, required: true },
 
     status: {
       type: String,
@@ -44,10 +46,11 @@ const RideSchema = new Schema<IRide>(
 
     fare: {
       type: Number,
+      default: 0,
     },
   },
   {
-    timestamps: true, // Adds createdAt and updatedAt
+    timestamps: true,
   }
 );
 

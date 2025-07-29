@@ -1,5 +1,15 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Ride from "./ride.model";
+
+const statusOrder = [
+  "requested",
+  "accepted",
+  "picked_up",
+  "in_transit",
+  "completed",
+  "cancelled",
+];
 
 export const requestRide = async (req: Request, res: Response) => {
   try {
@@ -23,12 +33,10 @@ export const requestRide = async (req: Request, res: Response) => {
       !destinationLocation?.lat ||
       !destinationLocation?.lng
     ) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Pickup and destination locations are required and must include lat and lng",
-        });
+      return res.status(400).json({
+        message:
+          "Pickup and destination locations are required and must include lat and lng",
+      });
     }
 
     const newRide = new Ride({
@@ -36,6 +44,7 @@ export const requestRide = async (req: Request, res: Response) => {
       pickupLocation,
       destinationLocation,
       status: "requested",
+      timestamps: {},
       requestedAt: new Date(),
     });
 
@@ -67,7 +76,7 @@ export const cancelRide = async (req: Request, res: Response) => {
         .json({ message: "You are not authorized to cancel this ride" });
     }
 
-    if (ride.status !== "requested") {
+    if (!["requested", "accepted"].includes(ride.status)) {
       return res
         .status(400)
         .json({ message: "Ride cannot be cancelled at this stage" });
@@ -94,6 +103,69 @@ export const getRideHistory = async (req: Request, res: Response) => {
     return res.status(200).json({ rides });
   } catch (error) {
     console.error("Error fetching ride history:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const updateRideStatus = async (req: Request, res: Response) => {
+  try {
+    const driverId = req.user!.id;
+    const { rideId, status } = req.body;
+
+    if (!statusOrder.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const ride = await Ride.findById(rideId);
+
+    if (!ride) {
+      return res.status(404).json({ message: "Ride not found" });
+    }
+
+    if (status !== "cancelled") {
+      const currentIndex = statusOrder.indexOf(ride.status);
+      const newIndex = statusOrder.indexOf(status);
+
+      if (newIndex !== currentIndex + 1) {
+        return res.status(400).json({ message: "Invalid status transition" });
+      }
+    } else {
+      if (!["requested", "accepted"].includes(ride.status)) {
+        return res
+          .status(400)
+          .json({ message: "Ride cannot be cancelled at this stage" });
+      }
+    }
+
+    ride.status = status;
+
+    if (!ride.timestamps) ride.timestamps = {};
+    const now = new Date();
+
+    switch (status) {
+      case "accepted":
+        ride.timestamps.acceptedAt = now;
+        ride.driver = new mongoose.Types.ObjectId(driverId);
+        break;
+      case "picked_up":
+        ride.timestamps.pickedUpAt = now;
+        break;
+      case "in_transit":
+        ride.timestamps.inTransitAt = now;
+        break;
+      case "completed":
+        ride.timestamps.completedAt = now;
+        break;
+      case "cancelled":
+        ride.timestamps.cancelledAt = now;
+        break;
+    }
+
+    await ride.save();
+
+    return res.json({ message: "Ride status updated", ride });
+  } catch (error) {
+    console.error("Error updating ride status:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

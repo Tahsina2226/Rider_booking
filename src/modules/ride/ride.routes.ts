@@ -9,7 +9,6 @@ const router = express.Router();
 
 router.post("/request", authenticateJWT, authorizeRoles("rider"), requestRide);
 
-//  cancel
 router.patch(
   "/cancel/:id",
   authenticateJWT,
@@ -17,7 +16,6 @@ router.patch(
   cancelRide
 );
 
-//
 router.get("/me", authenticateJWT, authorizeRoles("rider"), getRideHistory);
 
 export default router;
