@@ -7,7 +7,7 @@ import connectDB from "./config/database";
 import authRoutes from "./modules/auth/auth.routes";
 import rideRoutes from "./modules/ride/ride.routes";
 import driverRoutes from "./modules/driver/driver.routes";
-
+import adminRoutes from "./modules/admin/admin.routes";
 dotenv.config();
 
 const app: Application = express();
@@ -25,7 +25,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
 app.use("/api/driver", driverRoutes);
-
+app.use("/api/admin", adminRoutes);
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });
