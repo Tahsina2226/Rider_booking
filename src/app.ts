@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import connectDB from "./config/database";
 import authRoutes from "./modules/auth/auth.routes";
+import riderRoutes from "./modules/ride/ride.routes";
 
 dotenv.config();
 
@@ -20,5 +21,6 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/rides", riderRoutes);
 
 export default app;
