@@ -1,13 +1,15 @@
 import express from "express";
 import { blockUser, unblockUser, getAllUsers } from "./user.controller";
-import { authMiddleware } from "../../middlewares/authMiddleware";
-import { checkRole } from "../../middlewares/roleMiddleware";
+import {
+  authenticateJWT,
+  authorizeRoles,
+} from "../../middlewares/authMiddleware";
 
 const router = express.Router();
 
-router.use(authMiddleware);
-router.get("/", checkRole("admin"), getAllUsers);
-router.patch("/block/:id", checkRole("admin"), blockUser);
-router.patch("/unblock/:id", checkRole("admin"), unblockUser);
+router.use(authenticateJWT);
+router.get("/", authorizeRoles("admin"), getAllUsers);
+router.patch("/block/:id", authorizeRoles("admin"), blockUser);
+router.patch("/unblock/:id", authorizeRoles("admin"), unblockUser);
 
 export default router;
