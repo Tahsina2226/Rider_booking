@@ -1,4 +1,4 @@
-import express, { Application, Request, Response } from "express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -8,6 +8,9 @@ import authRoutes from "./modules/auth/auth.routes";
 import rideRoutes from "./modules/ride/ride.routes";
 import driverRoutes from "./modules/driver/driver.routes";
 import adminRoutes from "./modules/admin/admin.routes";
+
+import { errorHandler } from "./middlewares/error.middleware";
+
 dotenv.config();
 
 const app: Application = express();
@@ -26,15 +29,11 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/admin", adminRoutes);
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });
 
-app.use((err: any, req: Request, res: Response, next: Function) => {
-  console.error(err.stack);
-  res
-    .status(500)
-    .json({ message: "Something went wrong!", error: err.message });
-});
+app.use(errorHandler);
 
 export default app;
