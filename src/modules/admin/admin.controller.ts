@@ -57,3 +57,28 @@ export const getAllRides = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+export const getAnalytics = async (req: Request, res: Response) => {
+  try {
+    const totalRides = await Ride.countDocuments();
+    const completedRides = await Ride.countDocuments({ status: "completed" });
+    const activeDrivers = await User.countDocuments({
+      role: "driver",
+      availabilityStatus: true,
+    });
+    const totalEarningsData = await Ride.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: null, totalFare: { $sum: "$fare" } } },
+    ]);
+    const totalEarnings = totalEarningsData[0]?.totalFare || 0;
+
+    res.json({
+      totalRides,
+      completedRides,
+      activeDrivers,
+      totalEarnings,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};

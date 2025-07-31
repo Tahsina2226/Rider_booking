@@ -55,7 +55,12 @@ const UserSchema = new mongoose_1.Schema({
     isApproved: { type: Boolean, default: false },
     availabilityStatus: { type: Boolean, default: false },
     vehicleInfo: { type: String },
+    location: {
+        type: { type: String, enum: ["Point"], default: "Point" },
+        coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
+    },
 }, { timestamps: true });
+UserSchema.index({ location: "2dsphere" });
 UserSchema.pre("save", function (next) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!this.isModified("password"))

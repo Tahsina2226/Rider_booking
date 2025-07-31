@@ -11,4 +11,5 @@ router.get("/users", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.auth
 router.patch("/drivers/approve/:id", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("admin"), admin_controller_1.approveDriver);
 router.patch("/users/block/:id", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("admin"), admin_controller_1.blockUser);
 router.get("/rides", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("admin"), admin_controller_1.getAllRides);
+router.get("/analytics", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("admin"), admin_controller_1.getAnalytics);
 exports.default = router;

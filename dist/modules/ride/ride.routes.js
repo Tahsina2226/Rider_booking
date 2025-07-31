@@ -10,4 +10,6 @@ const router = express_1.default.Router();
 router.post("/request", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("rider"), ride_controller_1.requestRide);
 router.patch("/cancel/:id", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("rider"), ride_controller_1.cancelRide);
 router.get("/me", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("rider"), ride_controller_1.getRideHistory);
+router.post("/nearby-drivers", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("rider"), ride_controller_1.getNearbyDrivers);
+router.post("/fare/calculate", authMiddleware_1.authenticateJWT, (0, authMiddleware_1.authorizeRoles)("rider"), ride_controller_1.calculateFareHandler);
 exports.default = router;

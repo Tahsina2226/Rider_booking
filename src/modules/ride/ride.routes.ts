@@ -1,5 +1,11 @@
 import express from "express";
-import { requestRide, cancelRide, getRideHistory } from "./ride.controller";
+import {
+  requestRide,
+  cancelRide,
+  getRideHistory,
+  getNearbyDrivers,
+  calculateFareHandler,
+} from "./ride.controller";
 import {
   authenticateJWT,
   authorizeRoles,
@@ -17,5 +23,17 @@ router.patch(
 );
 
 router.get("/me", authenticateJWT, authorizeRoles("rider"), getRideHistory);
+router.post(
+  "/nearby-drivers",
+  authenticateJWT,
+  authorizeRoles("rider"),
+  getNearbyDrivers
+);
+router.post(
+  "/fare/calculate",
+  authenticateJWT,
+  authorizeRoles("rider"),
+  calculateFareHandler
+);
 
 export default router;

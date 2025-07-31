@@ -12,17 +12,44 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateRideStatus = exports.getRideHistory = exports.cancelRide = exports.requestRide = void 0;
+exports.getNearbyDrivers = exports.updateRideStatus = exports.getRideHistory = exports.cancelRide = exports.requestRide = exports.calculateFareHandler = exports.calculateFare = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const ride_model_1 = __importDefault(require("./ride.model"));
-const statusOrder = [
-    "requested",
-    "accepted",
-    "picked_up",
-    "in_transit",
-    "completed",
-    "cancelled",
-];
+const RATE_PER_KM = 10;
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+function getDistanceFromLatLonInKm(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = deg2rad(lat2 - lat1);
+    const dLng = deg2rad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) *
+            Math.cos(deg2rad(lat2)) *
+            Math.sin(dLng / 2) *
+            Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+const calculateFare = (distanceKm) => {
+    return distanceKm * RATE_PER_KM;
+};
+exports.calculateFare = calculateFare;
+const calculateFareHandler = (req, res) => {
+    const { pickupLocation, destinationLocation } = req.body;
+    if (!(pickupLocation === null || pickupLocation === void 0 ? void 0 : pickupLocation.lat) ||
+        !(pickupLocation === null || pickupLocation === void 0 ? void 0 : pickupLocation.lng) ||
+        !(destinationLocation === null || destinationLocation === void 0 ? void 0 : destinationLocation.lat) ||
+        !(destinationLocation === null || destinationLocation === void 0 ? void 0 : destinationLocation.lng)) {
+        return res.status(400).json({
+            message: "Pickup and destination locations must be provided with lat and lng",
+        });
+    }
+    const distanceKm = getDistanceFromLatLonInKm(pickupLocation.lat, pickupLocation.lng, destinationLocation.lat, destinationLocation.lng);
+    const fare = (0, exports.calculateFare)(distanceKm);
+    return res.status(200).json({ distanceKm, fare });
+};
+exports.calculateFareHandler = calculateFareHandler;
 const requestRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const riderId = req.user.id;
@@ -44,6 +71,8 @@ const requestRide = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: "Pickup and destination locations are required and must include lat and lng",
             });
         }
+        const distanceKm = getDistanceFromLatLonInKm(pickupLocation.lat, pickupLocation.lng, destinationLocation.lat, destinationLocation.lng);
+        const fare = (0, exports.calculateFare)(distanceKm);
         const newRide = new ride_model_1.default({
             rider: riderId,
             pickupLocation,
@@ -51,6 +80,7 @@ const requestRide = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             status: "requested",
             timestamps: {},
             requestedAt: new Date(),
+            fare,
         });
         yield newRide.save();
         return res
@@ -68,9 +98,8 @@ const cancelRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const riderId = req.user.id;
         const rideId = req.params.id;
         const ride = yield ride_model_1.default.findById(rideId);
-        if (!ride) {
+        if (!ride)
             return res.status(404).json({ message: "Ride not found" });
-        }
         if (ride.rider.toString() !== riderId) {
             return res
                 .status(403)
@@ -107,15 +136,28 @@ const getRideHistory = (req, res) => __awaiter(void 0, void 0, void 0, function*
 });
 exports.getRideHistory = getRideHistory;
 const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const driverId = req.user.id;
         const { rideId, status } = req.body;
+        const statusOrder = [
+            "requested",
+            "accepted",
+            "picked_up",
+            "in_transit",
+            "completed",
+            "cancelled",
+        ];
         if (!statusOrder.includes(status)) {
             return res.status(400).json({ message: "Invalid status value" });
         }
         const ride = yield ride_model_1.default.findById(rideId);
-        if (!ride) {
+        if (!ride)
             return res.status(404).json({ message: "Ride not found" });
+        if (((_a = ride.driver) === null || _a === void 0 ? void 0 : _a.toString()) !== driverId) {
+            return res
+                .status(403)
+                .json({ message: "Unauthorized to update this ride" });
         }
         if (status !== "cancelled") {
             const currentIndex = statusOrder.indexOf(ride.status);
@@ -162,3 +204,35 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.updateRideStatus = updateRideStatus;
+const getNearbyDrivers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { lat, lng } = req.body;
+        if (typeof lat !== "number" ||
+            typeof lng !== "number" ||
+            isNaN(lat) ||
+            isNaN(lng)) {
+            return res
+                .status(400)
+                .json({ message: "Valid latitude and longitude are required" });
+        }
+        const nearbyDrivers = yield mongoose_1.default
+            .model("User")
+            .find({
+            role: "driver",
+            availabilityStatus: true,
+            location: {
+                $near: {
+                    $geometry: { type: "Point", coordinates: [lng, lat] },
+                    $maxDistance: 5000,
+                },
+            },
+        })
+            .select("-password");
+        return res.status(200).json({ drivers: nearbyDrivers });
+    }
+    catch (error) {
+        console.error("Error fetching nearby drivers:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+exports.getNearbyDrivers = getNearbyDrivers;

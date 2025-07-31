@@ -20,6 +20,7 @@ const authenticateJWT = (req, res, next) => {
     }
 };
 exports.authenticateJWT = authenticateJWT;
+// Role based authorization middleware
 const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user)

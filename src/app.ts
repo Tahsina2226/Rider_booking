@@ -8,7 +8,7 @@ import authRoutes from "./modules/auth/auth.routes";
 import rideRoutes from "./modules/ride/ride.routes";
 import driverRoutes from "./modules/driver/driver.routes";
 import adminRoutes from "./modules/admin/admin.routes";
-
+import ratingRoutes from "./modules/rating/rating.routes";
 import { errorHandler } from "./middlewares/error.middleware";
 
 dotenv.config();
@@ -29,7 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/rides", rideRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use("/api/ratings", ratingRoutes);
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });

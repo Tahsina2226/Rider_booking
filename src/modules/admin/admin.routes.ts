@@ -4,6 +4,7 @@ import {
   approveDriver,
   blockUser,
   getAllRides,
+  getAnalytics,
 } from "./admin.controller";
 import {
   authenticateJWT,
@@ -29,5 +30,12 @@ router.patch(
 );
 
 router.get("/rides", authenticateJWT, authorizeRoles("admin"), getAllRides);
+
+router.get(
+  "/analytics",
+  authenticateJWT,
+  authorizeRoles("admin"),
+  getAnalytics
+);
 
 export default router;

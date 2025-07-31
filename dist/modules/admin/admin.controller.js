@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllRides = exports.blockUser = exports.approveDriver = exports.getAllUsers = void 0;
+exports.getAnalytics = exports.getAllRides = exports.blockUser = exports.approveDriver = exports.getAllUsers = void 0;
 const user_model_1 = __importDefault(require("../user/user.model"));
 const ride_model_1 = __importDefault(require("../ride/ride.model"));
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -70,3 +70,29 @@ const getAllRides = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getAllRides = getAllRides;
+const getAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const totalRides = yield ride_model_1.default.countDocuments();
+        const completedRides = yield ride_model_1.default.countDocuments({ status: "completed" });
+        const activeDrivers = yield user_model_1.default.countDocuments({
+            role: "driver",
+            availabilityStatus: true,
+        });
+        const totalEarningsData = yield ride_model_1.default.aggregate([
+            { $match: { status: "completed" } },
+            { $group: { _id: null, totalFare: { $sum: "$fare" } } },
+        ]);
+        const totalEarnings = ((_a = totalEarningsData[0]) === null || _a === void 0 ? void 0 : _a.totalFare) || 0;
+        res.json({
+            totalRides,
+            completedRides,
+            activeDrivers,
+            totalEarnings,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ message: "Server error", error });
+    }
+});
+exports.getAnalytics = getAnalytics;

@@ -1,7 +1,5 @@
-// ride.interface.ts
 import { Document, Types } from "mongoose";
 
-// Enum type
 export type RideStatus =
   | "requested"
   | "accepted"

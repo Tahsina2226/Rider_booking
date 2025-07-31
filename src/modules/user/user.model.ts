@@ -9,6 +9,10 @@ export interface IUser extends Document {
   isApproved?: boolean;
   availabilityStatus?: boolean;
   vehicleInfo?: string;
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -21,9 +25,15 @@ const UserSchema: Schema = new Schema(
     isApproved: { type: Boolean, default: false },
     availabilityStatus: { type: Boolean, default: false },
     vehicleInfo: { type: String },
+    location: {
+      type: { type: String, enum: ["Point"], default: "Point" },
+      coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
+    },
   },
   { timestamps: true }
 );
+
+UserSchema.index({ location: "2dsphere" });
 
 UserSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) return next();
