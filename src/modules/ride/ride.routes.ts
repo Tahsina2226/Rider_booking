@@ -1,11 +1,8 @@
 import express from "express";
-import {
-  requestRide,
-  cancelRide,
-  getRideHistory,
-  getNearbyDrivers,
-  calculateFareHandler,
-} from "./ride.controller";
+import * as rideRequestController from "./rideRequest.controller";
+
+import * as rideHistoryController from "./rideHistory.controller";
+import * as fareController from "./fare.controller";
 import {
   authenticateJWT,
   authorizeRoles,
@@ -13,27 +10,19 @@ import {
 
 const router = express.Router();
 
-router.post("/request", authenticateJWT, authorizeRoles("rider"), requestRide);
+const authRider = [authenticateJWT, authorizeRoles("rider")];
+const authDriver = [authenticateJWT, authorizeRoles("driver")];
 
-router.patch(
-  "/cancel/:id",
-  authenticateJWT,
-  authorizeRoles("rider"),
-  cancelRide
-);
+router.post("/request", authRider, rideRequestController.requestRide);
+router.post("/cancel/:id", authRider, rideRequestController.cancelRide);
 
-router.get("/me", authenticateJWT, authorizeRoles("rider"), getRideHistory);
+router.get("/history", authRider, rideHistoryController.getRideHistory);
 router.post(
   "/nearby-drivers",
-  authenticateJWT,
-  authorizeRoles("rider"),
-  getNearbyDrivers
+  authRider,
+  rideHistoryController.getNearbyDrivers
 );
-router.post(
-  "/fare/calculate",
-  authenticateJWT,
-  authorizeRoles("rider"),
-  calculateFareHandler
-);
+
+router.post("/calculate", fareController.calculateFareHandler);
 
 export default router;

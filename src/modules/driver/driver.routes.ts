@@ -11,36 +11,14 @@ import {
   authorizeRoles,
 } from "../../middlewares/authMiddleware";
 
+const authDriver = [authenticateJWT, authorizeRoles("driver")];
+
 const router = express.Router();
 
-router.patch(
-  "/availability",
-  authenticateJWT,
-  authorizeRoles("driver"),
-  setAvailability
-);
-
-router.get(
-  "/rides/available",
-  authenticateJWT,
-  authorizeRoles("driver"),
-  getAvailableRides
-);
-
-router.patch(
-  "/rides/accept/:id",
-  authenticateJWT,
-  authorizeRoles("driver"),
-  acceptRide
-);
-
-router.patch(
-  "/rides/status/:id",
-  authenticateJWT,
-  authorizeRoles("driver"),
-  updateRideStatus
-);
-
-router.get("/earnings", authenticateJWT, authorizeRoles("driver"), getEarnings);
+router.get("/available", authDriver, getAvailableRides);
+router.post("/accept/:id", authDriver, acceptRide);
+router.patch("/status/:id", authDriver, updateRideStatus);
+router.post("/availability", authDriver, setAvailability);
+router.get("/earnings", authDriver, getEarnings);
 
 export default router;

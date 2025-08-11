@@ -1,9 +1,8 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-import Ride from "../ride/ride.model";
+import Ride from "./ride.model";
 import User from "../user/user.model";
 
-// ===================== GET AVAILABLE RIDES =====================
 export const getAvailableRides = async (req: Request, res: Response) => {
   try {
     const rides = await Ride.find({ status: "requested" }).sort({
@@ -15,23 +14,10 @@ export const getAvailableRides = async (req: Request, res: Response) => {
   }
 };
 
-// ===================== ACCEPT RIDE =====================
 export const acceptRide = async (req: Request, res: Response) => {
   try {
     const driverId = req.user!.id;
     const rideId = req.params.id;
-
-    // Check if driver already has an active ride
-    const activeRide = await Ride.findOne({
-      driver: driverId,
-      status: { $in: ["accepted", "picked_up", "in_transit"] },
-    });
-
-    if (activeRide) {
-      return res
-        .status(400)
-        .json({ message: "You already have an active ride" });
-    }
 
     // Prevent race condition with atomic update
     const ride = await Ride.findOneAndUpdate(
@@ -50,13 +36,25 @@ export const acceptRide = async (req: Request, res: Response) => {
         .json({ message: "Ride already accepted or unavailable" });
     }
 
+    // Check if driver has active ride
+    const activeRide = await Ride.findOne({
+      driver: driverId,
+      status: { $in: ["accepted", "picked_up", "in_transit"] },
+      _id: { $ne: rideId },
+    });
+
+    if (activeRide) {
+      return res
+        .status(400)
+        .json({ message: "You already have an active ride" });
+    }
+
     res.json({ message: "Ride accepted", ride });
   } catch (error: any) {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// ===================== UPDATE RIDE STATUS =====================
 type RideStatus = "picked_up" | "in_transit" | "completed";
 
 export const updateRideStatus = async (req: Request, res: Response) => {
@@ -83,20 +81,18 @@ export const updateRideStatus = async (req: Request, res: Response) => {
         .json({ message: "Unauthorized to update this ride" });
     }
 
-    // Enforce strict status transitions
-    const validTransitions: Record<string, RideStatus> = {
+    // Explicit valid transitions
+    const validTransitions: Record<string, string> = {
+      requested: "accepted",
       accepted: "picked_up",
       picked_up: "in_transit",
       in_transit: "completed",
     };
 
     if (validTransitions[ride.status] !== status) {
-      return res.status(400).json({
-        message: `Invalid status transition from "${ride.status}" to "${status}". Must follow: picked_up → in_transit → completed.`,
-      });
+      return res.status(400).json({ message: "Invalid status transition" });
     }
 
-    // Update status
     ride.status = status;
 
     const statusMap = {
@@ -117,7 +113,6 @@ export const updateRideStatus = async (req: Request, res: Response) => {
   }
 };
 
-// ===================== SET DRIVER AVAILABILITY =====================
 export const setAvailability = async (req: Request, res: Response) => {
   try {
     const driverId = req.user!.id;
@@ -135,7 +130,6 @@ export const setAvailability = async (req: Request, res: Response) => {
   }
 };
 
-// ===================== GET DRIVER EARNINGS =====================
 export const getEarnings = async (req: Request, res: Response) => {
   try {
     const driverId = req.user!.id;

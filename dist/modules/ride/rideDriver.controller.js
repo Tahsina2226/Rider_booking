@@ -14,9 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getEarnings = exports.setAvailability = exports.updateRideStatus = exports.acceptRide = exports.getAvailableRides = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
-const ride_model_1 = __importDefault(require("../ride/ride.model"));
+const ride_model_1 = __importDefault(require("./ride.model"));
 const user_model_1 = __importDefault(require("../user/user.model"));
-// ===================== GET AVAILABLE RIDES =====================
 const getAvailableRides = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const rides = yield ride_model_1.default.find({ status: "requested" }).sort({
@@ -29,21 +28,10 @@ const getAvailableRides = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getAvailableRides = getAvailableRides;
-// ===================== ACCEPT RIDE =====================
 const acceptRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
         const rideId = req.params.id;
-        // Check if driver already has an active ride
-        const activeRide = yield ride_model_1.default.findOne({
-            driver: driverId,
-            status: { $in: ["accepted", "picked_up", "in_transit"] },
-        });
-        if (activeRide) {
-            return res
-                .status(400)
-                .json({ message: "You already have an active ride" });
-        }
         // Prevent race condition with atomic update
         const ride = yield ride_model_1.default.findOneAndUpdate({ _id: rideId, status: "requested" }, {
             status: "accepted",
@@ -54,6 +42,17 @@ const acceptRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res
                 .status(400)
                 .json({ message: "Ride already accepted or unavailable" });
+        }
+        // Check if driver has active ride
+        const activeRide = yield ride_model_1.default.findOne({
+            driver: driverId,
+            status: { $in: ["accepted", "picked_up", "in_transit"] },
+            _id: { $ne: rideId },
+        });
+        if (activeRide) {
+            return res
+                .status(400)
+                .json({ message: "You already have an active ride" });
         }
         res.json({ message: "Ride accepted", ride });
     }
@@ -84,18 +83,16 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 .status(403)
                 .json({ message: "Unauthorized to update this ride" });
         }
-        // Enforce strict status transitions
+        // Explicit valid transitions
         const validTransitions = {
+            requested: "accepted",
             accepted: "picked_up",
             picked_up: "in_transit",
             in_transit: "completed",
         };
         if (validTransitions[ride.status] !== status) {
-            return res.status(400).json({
-                message: `Invalid status transition from "${ride.status}" to "${status}". Must follow: picked_up → in_transit → completed.`,
-            });
+            return res.status(400).json({ message: "Invalid status transition" });
         }
-        // Update status
         ride.status = status;
         const statusMap = {
             picked_up: "pickedUpAt",
@@ -113,7 +110,6 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.updateRideStatus = updateRideStatus;
-// ===================== SET DRIVER AVAILABILITY =====================
 const setAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
@@ -130,7 +126,6 @@ const setAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.setAvailability = setAvailability;
-// ===================== GET DRIVER EARNINGS =====================
 const getEarnings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
