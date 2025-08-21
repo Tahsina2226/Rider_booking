@@ -47,6 +47,7 @@ const authDriver = [authMiddleware_1.authenticateJWT, (0, authMiddleware_1.autho
 router.post("/request", authRider, rideRequestController.requestRide);
 router.post("/cancel/:id", authRider, rideRequestController.cancelRide);
 router.get("/history", authRider, rideHistoryController.getRideHistory);
+router.get("/history/:id", authRider, rideHistoryController.getRideById);
 router.post("/nearby-drivers", authRider, rideHistoryController.getNearbyDrivers);
 router.post("/calculate", fareController.calculateFareHandler);
 exports.default = router;

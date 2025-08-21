@@ -16,7 +16,6 @@ exports.getEarnings = exports.setAvailability = exports.updateRideStatus = expor
 const mongoose_1 = __importDefault(require("mongoose"));
 const ride_model_1 = __importDefault(require("../ride/ride.model"));
 const user_model_1 = __importDefault(require("../user/user.model"));
-// ===================== GET AVAILABLE RIDES =====================
 const getAvailableRides = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const rides = yield ride_model_1.default.find({ status: "requested" }).sort({
@@ -29,12 +28,10 @@ const getAvailableRides = (req, res) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.getAvailableRides = getAvailableRides;
-// ===================== ACCEPT RIDE =====================
 const acceptRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
         const rideId = req.params.id;
-        // Check if driver already has an active ride
         const activeRide = yield ride_model_1.default.findOne({
             driver: driverId,
             status: { $in: ["accepted", "picked_up", "in_transit"] },
@@ -44,7 +41,6 @@ const acceptRide = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 .status(400)
                 .json({ message: "You already have an active ride" });
         }
-        // Prevent race condition with atomic update
         const ride = yield ride_model_1.default.findOneAndUpdate({ _id: rideId, status: "requested" }, {
             status: "accepted",
             driver: new mongoose_1.default.Types.ObjectId(driverId),
@@ -84,7 +80,6 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 .status(403)
                 .json({ message: "Unauthorized to update this ride" });
         }
-        // Enforce strict status transitions
         const validTransitions = {
             accepted: "picked_up",
             picked_up: "in_transit",
@@ -95,7 +90,6 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 message: `Invalid status transition from "${ride.status}" to "${status}". Must follow: picked_up → in_transit → completed.`,
             });
         }
-        // Update status
         ride.status = status;
         const statusMap = {
             picked_up: "pickedUpAt",
@@ -113,7 +107,6 @@ const updateRideStatus = (req, res) => __awaiter(void 0, void 0, void 0, functio
     }
 });
 exports.updateRideStatus = updateRideStatus;
-// ===================== SET DRIVER AVAILABILITY =====================
 const setAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
@@ -130,7 +123,6 @@ const setAvailability = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.setAvailability = setAvailability;
-// ===================== GET DRIVER EARNINGS =====================
 const getEarnings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const driverId = req.user.id;
