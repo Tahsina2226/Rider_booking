@@ -12,14 +12,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.register = void 0;
+exports.changePassword = exports.updateProfile = exports.login = exports.register = void 0;
 const user_model_1 = __importDefault(require("../user/user.model"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const generateToken = (userId, role) => {
     return jsonwebtoken_1.default.sign({ id: userId, role }, process.env.JWT_SECRET || "secret", {
         expiresIn: "7d",
     });
 };
+// Register
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, password, role, vehicleInfo } = req.body;
@@ -53,6 +55,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.register = register;
+//Login
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password } = req.body;
@@ -86,3 +89,39 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.login = login;
+// Update Profile
+const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const { name, phone } = req.body;
+    try {
+        const user = yield user_model_1.default.findByIdAndUpdate(userId, { name, phone }, { new: true }).select("-password");
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
+        res.status(200).json({ user });
+    }
+    catch (err) {
+        res.status(500).json({ message: "Profile update failed" });
+    }
+});
+exports.updateProfile = updateProfile;
+// Change Password
+const changePassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+    try {
+        const user = yield user_model_1.default.findById(userId);
+        if (!user)
+            return res.status(404).json({ message: "User not found" });
+        const isMatch = yield bcryptjs_1.default.compare(currentPassword, user.password);
+        if (!isMatch)
+            return res.status(400).json({ message: "Current password is incorrect" });
+        const salt = yield bcryptjs_1.default.genSalt(10);
+        user.password = yield bcryptjs_1.default.hash(newPassword, salt);
+        yield user.save();
+        res.status(200).json({ message: "Password changed successfully" });
+    }
+    catch (err) {
+        res.status(500).json({ message: "Password change failed" });
+    }
+});
+exports.changePassword = changePassword;
