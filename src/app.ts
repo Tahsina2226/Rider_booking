@@ -1,4 +1,4 @@
-import express, { Application, Request, Response, NextFunction } from "express";
+import express, { Application, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
@@ -17,7 +17,14 @@ const app: Application = express();
 
 connectDB();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  })
+);
+
 app.use(cookieParser());
 app.use(express.json());
 
@@ -30,6 +37,7 @@ app.use("/api/rides", rideRoutes);
 app.use("/api/driver", driverRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/ratings", ratingRoutes);
+
 app.use((req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });
 });
